@@ -33,18 +33,14 @@ public class ProofGenerator {
 
     static Multimap<Integer, Pair<Configuration, List<Cycle>>> ehSortings = HashMultimap.create();
 
-    static final int[][] _4_3 = new int[][]{{0,2,2,2}};
+    static final int[][] _4_3 = new int[][]{{0, 2, 2, 2}};
 
     static final int[][] _8_6 = new int[][]{
-            {0,2,2,0,2,2,2,2},
-            {0,2,0,2,2,2,2,2},
-            {0,0,2,2,2,2,2,2}};
+            {0, 2, 2, 0, 2, 2, 2, 2},
+            {0, 2, 0, 2, 2, 2, 2, 2},
+            {0, 0, 2, 2, 2, 2, 2, 2}};
 
     static final int[][] _11_8 = new int[][]{
-                {0, 2, 2, 2},
-                {0, 2, 2, 0, 2, 2, 2, 2},
-                {0, 2, 0, 2, 2, 2, 2, 2},
-                {0, 0, 2, 2, 2, 2, 2, 2},
                 {0, 2, 2, 0, 2, 2, 2, 0, 2, 2, 2},
                 {0, 2, 2, 0, 2, 2, 0, 2, 2, 2, 2},
                 {0, 2, 2, 0, 2, 0, 2, 2, 2, 2, 2},
