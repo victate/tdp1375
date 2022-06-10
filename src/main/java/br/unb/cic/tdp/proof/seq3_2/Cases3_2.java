@@ -42,7 +42,7 @@ public class Cases3_2 {
                 .createVector(Arrays.stream(spi.getSymbols().toArray()).boxed().collect(Collectors.toSet())))) {
             final var pi = Cycle.create(Ints.toArray(permutation.getVector()));
             if (spi.stream().noneMatch(cycle -> isOriented(pi, cycle))) {
-                final var openGates = getOpenGates(spi, pi);
+                final var openGates = new Configuration(spi, pi).getOpenGates();
                 if (openGates.size() <= 2) {
                     final var moves = searchForSortingSeq(pi, spi, new Stack<>(), 3, 1.5F);
 

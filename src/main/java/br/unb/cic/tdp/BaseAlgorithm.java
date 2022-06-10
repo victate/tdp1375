@@ -11,8 +11,11 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.primitives.Ints;
 import lombok.SneakyThrows;
+import org.paukov.combinatorics.Factory;
+import org.paukov.combinatorics.Generator;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -55,6 +58,17 @@ public abstract class BaseAlgorithm {
         return false;
     }
 
+    private static boolean isOpenGate(int pos, final Cycle cycle, final Cycle piInverse, final Cycle[] cycleIndex) {
+        final var aPos = piInverse.indexOf(cycle.get(pos));
+        final var bPos = piInverse.indexOf(cycle.image(cycle.get(pos)));
+        for (var i = 1; i < (aPos < bPos ? bPos - aPos : piInverse.size() - (aPos - bPos)); i++) {
+            final var index = (i + aPos) % piInverse.size();
+            if (cycleIndex[piInverse.get(index)] != null)
+                return false;
+        }
+        return true;
+    }
+
     public static List<Cycle> ehExtend(final List<Cycle> config, final MulticyclePermutation spi, final Cycle pi) {
         final var piInverse = pi.getInverse().startingBy(pi.getMinSymbol());
 
@@ -68,24 +82,25 @@ public abstract class BaseAlgorithm {
         final var configCycleIndex = cycleIndex(config, pi);
         final var spiCycleIndex = cycleIndex(spi, pi);
 
-        final var openGates = getOpenGates(config, pi);
-
         // Type 1 extension
-        for (final int openGate: openGates) {
-            final var symbol = pi.getSymbols()[openGate];
-            final var cycle = configCycleIndex[symbol];
-            final var aPos = piInverse.indexOf(symbol);
-            final var bPos = piInverse.indexOf(cycle.image(symbol));
-            final var intersectingCycle = getIntersectingCycle(aPos, bPos, spiCycleIndex, piInverse);
-            if (intersectingCycle.isPresent()
-                    && !contains(configSymbols, spiCycleIndex[intersectingCycle.get().get(0)])) {
-
-                int a = intersectingCycle.get().get(0), b = intersectingCycle.get().image(a),
-                        c = intersectingCycle.get().image(b);
-                final var _config = new ArrayList<>(config);
-                _config.add(Cycle.create(a, b, c));
-
-                return _config;
+        // These two outer loops are O(1), since at this point, ||mu|| never
+        // exceeds 16
+        for (Cycle cycle : config) {
+            for (int i = 0; i < cycle.getSymbols().length; i++) {
+                // O(n)
+                if (isOpenGate(i, cycle, piInverse, configCycleIndex)) {
+                    final var aPos = piInverse.indexOf(cycle.get(i));
+                    final var bPos = piInverse.indexOf(cycle.image(cycle.get(i)));
+                    final var intersectingCycle = getIntersectingCycle(aPos, bPos, spiCycleIndex, piInverse);
+                    if (intersectingCycle.isPresent()
+                            && !contains(configSymbols, spiCycleIndex[intersectingCycle.get().get(0)])) {
+                        int a = intersectingCycle.get().get(0), b = intersectingCycle.get().image(a),
+                                c = intersectingCycle.get().image(b);
+                        final var bigGamma = new ArrayList<>(config);
+                        bigGamma.add(Cycle.create(a, b, c));
+                        return bigGamma;
+                    }
+                }
             }
         }
 
@@ -194,10 +209,6 @@ public abstract class BaseAlgorithm {
         return _pi;
     }
 
-    protected Optional<List<Cycle>> searchFor3_2_Seq(final List<Cycle> mu, final Cycle pi) {
-        return searchForSeq(mu, pi, _3_2_sortings);
-    }
-
     protected Optional<List<Cycle>> searchFor11_8_Seq(final List<Cycle> mu, final Cycle pi) {
         return searchForSeq(mu, pi, _11_8_sortings);
     }
@@ -230,18 +241,26 @@ public abstract class BaseAlgorithm {
     protected Optional<List<Cycle>> searchForSeqBadSmallComponents(final List<Cycle> badSmallComponents,
                                                                    final Cycle pi) {
 
-        final var spi = new MulticyclePermutation(badSmallComponents);
-        final var subConfig = new Configuration(spi, removeExtraSymbols(spi.getSymbols(), pi));
-        var pair = _11_8_sortings.get(subConfig.hashCode())
-                .stream().filter(p -> p.getFirst().equals(subConfig)).findFirst();
-        if (pair.isPresent()) {
-            final var sorting = subConfig.translatedSorting(pair.get().getFirst(), pair.get().getSecond());
-            return Optional.of(sorting);
+        while (!badSmallComponents.isEmpty()) {
+            final var spi = new MulticyclePermutation(badSmallComponents);
+            final var subConfig = new Configuration(spi, removeExtraSymbols(spi.getSymbols(), pi));
+
+            var pair = _11_8_sortings.get(subConfig.hashCode())
+                    .stream().filter(p -> p.getFirst().equals(subConfig)).findFirst();
+            if (pair.isPresent()) {
+                final var sorting = subConfig.translatedSorting(pair.get().getFirst(), pair.get().getSecond());
+                return Optional.of(sorting);
+            }
+
+            badSmallComponents.remove(0);
         }
 
         return Optional.empty();
     }
 
+    public static <T> Generator<T> combinations(final Collection<T> collection, final int k) {
+        return Factory.createSimpleCombinationGenerator(Factory.createVector(collection), k);
+    }
 
     protected Pair<List<Cycle>, Cycle> apply3_2_Unoriented(final MulticyclePermutation spi, final Cycle pi) {
         final var segment = spi.getNonTrivialCycles().stream().findFirst().get();

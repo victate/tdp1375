@@ -93,7 +93,7 @@ public class EliasAndHartman extends BaseAlgorithm {
             final var badSmallComponentsCycles = badSmallComponents.stream().flatMap(Collection::stream).collect(Collectors.toList());
 
             if (get3Norm(badSmallComponentsCycles) >= 8) {
-                final var _11_8Seq = searchForSeqBadSmallComponents(badSmallComponentsCycles, pi);
+                final var _11_8Seq = searchFor11_8_Seq(badSmallComponentsCycles, pi);
                 for (final var move : _11_8Seq.get()) {
                     pi = computeProduct(move, pi).asNCycle();
                 }

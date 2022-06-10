@@ -1,5 +1,6 @@
 package br.unb.cic.tdp;
 
+import br.unb.cic.tdp.base.CommonOperations;
 import br.unb.cic.tdp.base.Configuration;
 import br.unb.cic.tdp.permutation.Cycle;
 import br.unb.cic.tdp.permutation.MulticyclePermutation;
@@ -285,18 +286,5 @@ public class Silvaetal extends BaseAlgorithm {
         final var moves = Arrays.asList(Cycle.create(a, b, c), Cycle.create(b, c, d), Cycle.create(c, d, e));
 
         return new Pair<>(moves, applyMoves(pi, moves));
-    }
-
-    public static void main(String[] args) {
-        System.out.println("Loading cases into memory...");
-        final var silvaetal = new Silvaetal();
-        System.out.println("Finished loading...");
-        var pi = Cycle.create(args[0]);
-        final var moves = silvaetal.sort(pi);
-        System.out.println(pi);
-        for (Cycle move : moves.getSecond()) {
-            pi = PermutationGroups.computeProduct(move, pi).asNCycle();
-            System.out.println(pi);
-        }
     }
 }
