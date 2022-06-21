@@ -324,34 +324,48 @@ public class CommonOperations implements Serializable {
         return components;
     }
 
-    public static Set<Integer> getOpenGates(final Collection<Cycle> config, final Cycle pi) {
-        return getOpenGates(config, pi, Configuration.signature(config, pi));
-    }
+    public static Set<Integer> getOpenGates(final Collection<Cycle> spi, final Cycle pi) {
+        final var openGates = new HashSet<Integer>();
 
-    public static Set<Integer> getOpenGates(final Collection<Cycle> config, final Cycle pi, float[] signature) {
-        final Set<Integer> openGates = new HashSet<>();
+        for (Cycle epsilon : spi) {
+            if (epsilon.size() == 1) continue;
 
-        final var piInverse = pi.getInverse();
-        signature = signature.clone();
-        ArrayUtils.reverse(signature);
+            for (int i = 0; i < epsilon.size(); i++) {
+                int a = epsilon.get(i);
+                int b = epsilon.image(a);
 
-        for (final var cycle: config) {
-            outer: for (int i = 0; i < cycle.size(); i++) {
-                final var symbol = cycle.get(i);
-                final var label = signature[piInverse.indexOf(symbol)];
-                final var aPos = piInverse.indexOf(symbol);
-                final var bPos = piInverse.indexOf(cycle.image(symbol));
+                var intersecting = false;
+                var orientedTriple = false;
 
-                var nextPos = (aPos + 1) % piInverse.size();
+                openGate: for (Cycle gamma : spi) {
+                    if (gamma.size() == 1) continue;
 
-                while (nextPos != bPos) {
-                    if (signature[nextPos] != 0.0f && ((int) signature[nextPos] != label || (signature[nextPos] % 0 > 0 && label < signature[nextPos] && signature[nextPos] < label + 1))) {
-                        continue outer;
+                    if (epsilon != gamma) {
+                        for (int j = 0; j < gamma.size(); j++) {
+                            int c = gamma.get(j);
+                            int d = gamma.image(c);
+
+                            if (areSymbolsInCyclicOrder(pi.getInverse(), a, c, b, d)) {
+                                intersecting = true;
+                                break openGate;
+                            }
+                        }
+                    } else {
+                        for (int j = 0; j < epsilon.size(); j++) {
+                            int c = epsilon.get(j);
+                            if (c != a && c != b) {
+                                if (areSymbolsInCyclicOrder(pi, a, b, c)) {
+                                    orientedTriple = true;
+                                    break openGate;
+                                }
+                            }
+                        }
                     }
-                    nextPos = (nextPos + 1) % piInverse.size();
                 }
 
-                openGates.add(pi.indexOf(cycle.get(i)));
+                if (!intersecting && !orientedTriple) {
+                    openGates.add(a);
+                }
             }
         }
 

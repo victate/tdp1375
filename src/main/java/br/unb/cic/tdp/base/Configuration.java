@@ -85,13 +85,6 @@ public class Configuration {
         return signature;
     }
 
-    public static boolean isOpenGate(final int i, final float[] signature) {
-        final var n = signature.length;
-        float a = signature[mod(i, n)], b = signature[mod(i - 1, n)], c = signature[mod(i - 2, n)];
-        return (a % 1 == 0 && a == b) || (a % 1 > 0 && b % 1 > 0 && c % 1 > 0 &&
-                Math.floor(a) == Math.floor(b) && Math.floor(a) == Math.floor(c) && c < a && a < b);
-    }
-
     public static Configuration ofSignature(float[] signature) {
         final var pi = CANONICAL_PI[signature.length];
 
@@ -286,15 +279,8 @@ public class Configuration {
         return getCanonical().signature.equals(other.getCanonical().signature);
     }
 
-    public List<Integer> getOpenGates() {
-        final var result = new ArrayList<Integer>();
-        final var n = signature.content.length;
-        for (int i = 0; i < n; i++) {
-            if (isOpenGate(i, signature.content)) {
-                result.add(i);
-            }
-        }
-        return result;
+    public Set<Integer> getOpenGates() {
+        return CommonOperations.getOpenGates(spi, pi);
     }
 
     public static class Signature {

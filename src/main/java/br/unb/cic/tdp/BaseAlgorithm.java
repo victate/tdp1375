@@ -15,7 +15,6 @@ import org.paukov.combinatorics.Factory;
 import org.paukov.combinatorics.Generator;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.FileReader;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -58,17 +57,6 @@ public abstract class BaseAlgorithm {
         return false;
     }
 
-    private static boolean isOpenGate(int pos, final Cycle cycle, final Cycle piInverse, final Cycle[] cycleIndex) {
-        final var aPos = piInverse.indexOf(cycle.get(pos));
-        final var bPos = piInverse.indexOf(cycle.image(cycle.get(pos)));
-        for (var i = 1; i < (aPos < bPos ? bPos - aPos : piInverse.size() - (aPos - bPos)); i++) {
-            final var index = (i + aPos) % piInverse.size();
-            if (cycleIndex[piInverse.get(index)] != null)
-                return false;
-        }
-        return true;
-    }
-
     public static List<Cycle> ehExtend(final List<Cycle> config, final MulticyclePermutation spi, final Cycle pi) {
         final var piInverse = pi.getInverse().startingBy(pi.getMinSymbol());
 
@@ -82,46 +70,48 @@ public abstract class BaseAlgorithm {
         final var configCycleIndex = cycleIndex(config, pi);
         final var spiCycleIndex = cycleIndex(spi, pi);
 
+        final Set<Integer> openGates = getOpenGates(config, pi);
+
         // Type 1 extension
         // These two outer loops are O(1), since at this point, ||mu|| never
         // exceeds 16
-        for (Cycle cycle : config) {
-            for (int i = 0; i < cycle.getSymbols().length; i++) {
-                // O(n)
-                if (isOpenGate(i, cycle, piInverse, configCycleIndex)) {
-                    final var aPos = piInverse.indexOf(cycle.get(i));
-                    final var bPos = piInverse.indexOf(cycle.image(cycle.get(i)));
-                    final var intersectingCycle = getIntersectingCycle(aPos, bPos, spiCycleIndex, piInverse);
-                    if (intersectingCycle.isPresent()
-                            && !contains(configSymbols, spiCycleIndex[intersectingCycle.get().get(0)])) {
-                        int a = intersectingCycle.get().get(0), b = intersectingCycle.get().image(a),
-                                c = intersectingCycle.get().image(b);
-                        final var bigGamma = new ArrayList<>(config);
-                        bigGamma.add(Cycle.create(a, b, c));
-                        return bigGamma;
-                    }
-                }
+        for (final int openGate: openGates) {
+            final var cycle = configCycleIndex[openGate];
+            final var aPos = piInverse.indexOf(openGate);
+            final var bPos = piInverse.indexOf(cycle.image(openGate));
+            final var intersectingCycle = getIntersectingCycle(aPos, bPos, spiCycleIndex, piInverse);
+            if (intersectingCycle.isPresent()
+                    && !contains(configSymbols, spiCycleIndex[intersectingCycle.get().get(0)])) {
+
+                int a = intersectingCycle.get().get(0), b = intersectingCycle.get().image(a),
+                        c = intersectingCycle.get().image(b);
+                final var _config = new ArrayList<>(config);
+                _config.add(Cycle.create(a, b, c));
+
+                return _config;
             }
         }
 
         // Type 2 extension
-        for (Cycle cycle : config) {
-            for (int i = 0; i < cycle.size(); i++) {
-                final var aPos = piInverse.indexOf(cycle.get(i));
-                final var bPos = piInverse.indexOf(cycle.image(cycle.get(i)));
-                for (int j = 1; j < (aPos < bPos ? bPos - aPos : piInverse.size() - (aPos - bPos)); j++) {
-                    final var index = (j + aPos) % piInverse.size();
-                    if (configCycleIndex[piInverse.get(index)] == null) {
-                        final var intersectingCycle = spiCycleIndex[piInverse.get(index)];
-                        if (intersectingCycle != null && intersectingCycle.size() > 1
-                                && !contains(configSymbols, spiCycleIndex[intersectingCycle.get(0)])) {
-                            final var a = piInverse.get(index);
-                            final var b = intersectingCycle.image(a);
-                            if (isOutOfInterval(piInverse.indexOf(b), aPos, bPos)) {
-                                final var c = intersectingCycle.image(b);
-                                final var _config = new ArrayList<>(config);
-                                _config.add(Cycle.create(a, b, c));
-                                return _config;
+        if (openGates.isEmpty()) {
+            for (Cycle cycle : config) {
+                for (int i = 0; i < cycle.size(); i++) {
+                    final var aPos = piInverse.indexOf(cycle.get(i));
+                    final var bPos = piInverse.indexOf(cycle.image(cycle.get(i)));
+                    for (int j = 1; j < (aPos < bPos ? bPos - aPos : piInverse.size() - (aPos - bPos)); j++) {
+                        final var index = (j + aPos) % piInverse.size();
+                        if (configCycleIndex[piInverse.get(index)] == null) {
+                            final var intersectingCycle = spiCycleIndex[piInverse.get(index)];
+                            if (intersectingCycle != null && intersectingCycle.size() > 1
+                                    && !contains(configSymbols, spiCycleIndex[intersectingCycle.get(0)])) {
+                                final var a = piInverse.get(index);
+                                final var b = intersectingCycle.image(a);
+                                if (isOutOfInterval(piInverse.indexOf(b), aPos, bPos)) {
+                                    final var c = intersectingCycle.image(b);
+                                    final var _config = new ArrayList<>(config);
+                                    _config.add(Cycle.create(a, b, c));
+                                    return _config;
+                                }
                             }
                         }
                     }
@@ -213,8 +203,8 @@ public abstract class BaseAlgorithm {
         return searchForSeq(mu, pi, _11_8_sortings);
     }
 
-    private Optional<List<Cycle>> searchForSeq(final List<Cycle> mu, final Cycle pi,
-                                               final Multimap<Integer, Pair<Configuration, List<Cycle>>> sortings) {
+    protected Optional<List<Cycle>> searchForSeq(final Collection<Cycle> mu, final Cycle pi,
+                                                 final Multimap<Integer, Pair<Configuration, List<Cycle>>> sortings) {
         final var allSymbols = mu.stream().flatMap(c -> Ints.asList(c.getSymbols()).stream()).collect(Collectors.toSet());
         final var _pi = new IntArrayList(allSymbols.size());
         for (final var symbol : pi.getSymbols()) {
