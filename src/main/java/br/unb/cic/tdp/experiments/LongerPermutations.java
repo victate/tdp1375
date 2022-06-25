@@ -7,6 +7,7 @@ import br.unb.cic.tdp.permutation.Cycle;
 import br.unb.cic.tdp.permutation.PermutationGroups;
 import com.google.common.base.Stopwatch;
 import lombok.SneakyThrows;
+import lombok.val;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -32,11 +33,11 @@ public class LongerPermutations {
     @SneakyThrows
     private static void run(final String root, final int i) {
         System.out.println("stats" + i * 10 + ".txt");
-        final var out = new FileOutputStream( root + "/stats/stats" + i * 10 + ".txt");
-        final var ps = new PrintStream(out);
+        val out = new FileOutputStream( root + "/stats/stats" + i * 10 + ".txt");
+        val ps = new PrintStream(out);
 
-        final var resource = LongerPermutations.class.getResource("/datasets/large" + i * 10 + ".txt");
-        final var path = Paths.get(resource.toURI());
+        val resource = LongerPermutations.class.getResource("/datasets/large" + i * 10 + ".txt");
+        val path = Paths.get(resource.toURI());
 
         Files.lines(path).forEach (line -> {
             var pi = Cycle.create(line);
@@ -47,7 +48,7 @@ public class LongerPermutations {
             ps.print(",");
 
             var sw = Stopwatch.createStarted();
-            final var silvaSorting = silva.sort(pi);
+            val silvaSorting = silva.sort(pi);
             sw.stop();
 
             ps.print(silvaSorting.getSecond().size());
@@ -57,7 +58,7 @@ public class LongerPermutations {
             ps.print(",");
 
             sw = Stopwatch.createStarted();
-            final var ehSorting = eh.sort(pi);
+            val ehSorting = eh.sort(pi);
             sw.stop();
 
             ps.print(ehSorting.getSecond().size());

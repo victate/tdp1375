@@ -2,7 +2,6 @@ package br.unb.cic.tdp.permutation;
 
 import org.junit.jupiter.api.Test;
 
-import static br.unb.cic.tdp.base.CommonOperations.applyTransposition;
 import static org.junit.jupiter.api.Assertions.*;
 
 class PermutationGroupsTest {

@@ -4,9 +4,9 @@ import br.unb.cic.tdp.permutation.Cycle;
 import br.unb.cic.tdp.permutation.MulticyclePermutation;
 import br.unb.cic.tdp.permutation.PermutationGroups;
 import br.unb.cic.tdp.util.Pair;
-import cern.colt.list.IntArrayList;
 import cern.colt.list.FloatArrayList;
-import org.apache.commons.lang.ArrayUtils;
+import cern.colt.list.IntArrayList;
+import lombok.val;
 
 import java.io.Serializable;
 import java.util.*;
@@ -24,7 +24,7 @@ public class CommonOperations implements Serializable {
     static {
         CANONICAL_PI = new Cycle[2000];
         for (var i = 1; i < 2000; i++) {
-            final var pi = new int[i];
+            val pi = new int[i];
             for (var j = 0; j < i; j++) {
                 pi[j] = j;
             }
@@ -86,12 +86,12 @@ public class CommonOperations implements Serializable {
         return -1;
     }
 
-    public static Cycle applyTransposition(final Cycle pi, final Cycle move) {
-        final var a = move.get(0);
-        final var b = move.get(1);
-        final var c = move.get(2);
+    public static Cycle optimazedApplyTransposition(final Cycle pi, final Cycle move) {
+        val a = move.get(0);
+        val b = move.get(1);
+        val c = move.get(2);
 
-        final var indexes = new int[3];
+        val indexes = new int[3];
         for (var i = 0; i < pi.size(); i++) {
             if (pi.get(i) == a)
                 indexes[0] = i;
@@ -103,7 +103,7 @@ public class CommonOperations implements Serializable {
 
         Arrays.sort(indexes);
 
-        final var result = new int[pi.size()];
+        val result = new int[pi.size()];
         System.arraycopy(pi.getSymbols(), 0, result, 0, indexes[0]);
         System.arraycopy(pi.getSymbols(), indexes[1], result, indexes[0], indexes[2] - indexes[1]);
         System.arraycopy(pi.getSymbols(), indexes[0], result, indexes[0] + (indexes[2] - indexes[1]), indexes[1] - indexes[0]);
@@ -123,15 +123,15 @@ public class CommonOperations implements Serializable {
      * Creates an array where the cycles in <code>bigGamma</code> can be accessed by the symbols of <code>pi</code>
      * (being the indexes of the resulting array).
      */
-    public static Cycle[] cycleIndex(final Collection<Cycle> cycle, final Cycle pi) {
-        return cyclesIndex(List.of(cycle), pi);
+    public static Cycle[] cycleIndex(final Collection<Cycle> bigGamma, final Cycle pi) {
+        return cyclesIndex(List.of(bigGamma), pi);
     }
 
     public static Cycle[] cyclesIndex(final List<Collection<Cycle>> components, final Cycle pi) {
-        final var index = new Cycle[pi.getMaxSymbol() + 1];
+        val index = new Cycle[pi.getMaxSymbol() + 1];
 
         components.forEach(component -> {
-            for (final var cycle : component) {
+            for (val cycle : component) {
                 for (final int symbol : cycle.getSymbols()) {
                     index[symbol] = cycle;
                 }
@@ -142,7 +142,7 @@ public class CommonOperations implements Serializable {
     }
 
     public static boolean areSymbolsInCyclicOrder(final Cycle cycle, int... symbols) {
-        final var symbolIndexes = cycle.getSymbolIndexes();
+        val symbolIndexes = cycle.getSymbolIndexes();
 
         boolean leap = false;
         for (int i = 0; i < symbols.length; i++) {
@@ -163,33 +163,28 @@ public class CommonOperations implements Serializable {
      */
     public static List<Cycle> searchForSortingSeq(final Cycle pi, final MulticyclePermutation bigGamma, final Stack<Cycle> moves,
                                                   final int initialNumberOfEvenCycles, final float maxRatio) {
-        int numberOfEvenCycles = bigGamma.getNumberOfEvenCycles();
-        final var lowerBound = (pi.size() - numberOfEvenCycles) / 2;
-        final var minAchievableRatio = (float) (moves.size() + lowerBound) / (float) ((pi.size() - initialNumberOfEvenCycles) / 2);
+        val numberOfEvenCycles = bigGamma.getNumberOfEvenCycles();
+        val lowerBound = (pi.size() - numberOfEvenCycles) / 2;
+        val minAchievableRatio = (float) (moves.size() + lowerBound) / (float) ((pi.size() - initialNumberOfEvenCycles) / 2);
 
         // Do not allow it to exceed the max ratio
         if (minAchievableRatio <= maxRatio) {
-            final var delta = (numberOfEvenCycles - initialNumberOfEvenCycles);
-            final var instantRatio = delta > 0
+            val delta = (numberOfEvenCycles - initialNumberOfEvenCycles);
+            val instantRatio = delta > 0
                     ? (float) (moves.size() * 2) / (numberOfEvenCycles - initialNumberOfEvenCycles)
                     : 0;
-            if (1 <= instantRatio && instantRatio <= maxRatio) {
+            if (moves.size() >= 8 && instantRatio <= maxRatio) {
                 return moves;
             } else {
-                final var nextRatio = (float) (moves.size() + 1 + lowerBound) / ((pi.size() - initialNumberOfEvenCycles) / 2);
                 final Iterator<Pair<Cycle, Integer>> iterator;
-                if (nextRatio > maxRatio) {
-                    iterator = generateAll0And2Moves(bigGamma, pi).filter(p -> p.getSecond() == 2).iterator();
-                } else {
-                    iterator = generateAll0And2Moves(bigGamma, pi).iterator();
-                }
+                iterator = generateAll0And2Moves(bigGamma, pi).iterator();
                 while (iterator.hasNext()) {
-                    final var pair = iterator.next();
-                    final var move = pair.getFirst();
+                    val pair = iterator.next();
+                    val move = pair.getFirst();
 
-                    final var _bigGamma = PermutationGroups.computeProduct(bigGamma, move.getInverse());
+                    val _bigGamma = PermutationGroups.computeProduct(bigGamma, move.getInverse());
                     moves.push(move);
-                    final var sorting = searchForSortingSeq(applyTransposition(pi, move),
+                    val sorting = searchForSortingSeq(optimazedApplyTransposition(pi, move),
                             _bigGamma, moves, initialNumberOfEvenCycles, maxRatio);
                     if (!sorting.isEmpty()) {
                         return moves;
@@ -202,9 +197,31 @@ public class CommonOperations implements Serializable {
         return Collections.emptyList();
     }
 
-    public static Stream<Pair<Cycle, Integer>> generateAll0And2Moves(final MulticyclePermutation spi, final Cycle pi) {
-        final var ci = cycleIndex(spi, pi);
-        final var numberOfEvenCycles = spi.getNumberOfEvenCycles();
+    public static Stream<Pair<Cycle, Integer>> generateAll0_2Moves(final MulticyclePermutation spi, final Cycle pi) {
+        val ci = cycleIndex(spi, pi);
+        return IntStream.range(0, pi.size() - 2).boxed()
+                .flatMap(i -> IntStream.range(i + 1, pi.size() - 1).boxed()
+                .flatMap(j -> IntStream.range(j + 1, pi.size()).boxed()
+                .map(k -> {
+                    int a = pi.get(i), b = pi.get(j), c = pi.get(k);
+                    val is_2Move = ci[a] != ci[b] && ci[b] != ci[c] && ci[a] != ci[c];
+                    val move = Cycle.create(a, b, c);
+                    if (is_2Move)
+                        return new Pair<>(move, -2);
+
+                    val spi_ = computeProduct(true, pi.getMaxSymbol() + 1, spi, move.getInverse());
+                    val delta = spi_.size() - spi.size();
+
+                    if (delta == 0)
+                        return new Pair<>(move, delta);
+
+                    return null;
+                }))).filter(Objects::nonNull);
+    }
+
+    public static Stream<Pair<Cycle, Integer>> generateAll2Moves(final MulticyclePermutation spi, final Cycle pi) {
+        val ci = cycleIndex(spi, pi);
+        val numberOfEvenCycles = spi.getNumberOfEvenCycles();
         return IntStream.range(0, pi.size() - 2).boxed()
                 .filter(i -> ci[pi.get(i)].size() > 1)
                 .flatMap(i -> IntStream.range(i + 1, pi.size() - 1).boxed()
@@ -212,15 +229,46 @@ public class CommonOperations implements Serializable {
                                 .filter(k -> ci[pi.get(k)].size() > 1)
                                 .filter(k -> {
                                     int a = pi.get(i), b = pi.get(j), c = pi.get(k);
-                                    final var is_2Move = ci[a] != ci[b] && ci[b] != ci[c] && ci[a] != ci[c];
+                                    val is_2Move = ci[a] != ci[b] && ci[b] != ci[c] && ci[a] != ci[c];
                                     // skip (-2)-moves
                                     return !is_2Move;
                                 }).map(k -> {
                                     int a = pi.get(i), b = pi.get(j), c = pi.get(k);
 
-                                    final var move = Cycle.create(a, b, c);
-                                    final var spi_ = computeProduct(true, pi.getMaxSymbol() + 1, spi, move.getInverse());
-                                    final var delta = spi_.getNumberOfEvenCycles() - numberOfEvenCycles;
+                                    if ((ci[a] == ci[b] && ci[b] == ci[c] && ci[a] == ci[c] && ci[a].isEven()) // If all symbols belong to the same cycle and the cycle is even - can be a 2-move from an oriented cycle
+                                            || ((ci[a] == ci[b] && !ci[a].isEven() && !ci[c].isEven()) || // If the symbols belong to two cycles, they must be odd in order to exist a 2-move
+                                            (ci[a] == ci[c] && !ci[a].isEven() && !ci[b].isEven()))) {
+                                        val move = Cycle.create(a, b, c);
+                                        val spi_ = computeProduct(true, pi.getMaxSymbol() + 1, spi, move.getInverse());
+                                        val delta = spi_.getNumberOfEvenCycles() - numberOfEvenCycles;
+
+                                        if (delta > 0)
+                                            return new Pair<>(move, delta);
+                                    }
+
+                                    return null;
+                                }))).filter(Objects::nonNull);
+    }
+
+    public static Stream<Pair<Cycle, Integer>> generateAll0And2Moves(final MulticyclePermutation spi, final Cycle pi) {
+        val ci = cycleIndex(spi, pi);
+        val numberOfEvenCycles = spi.getNumberOfEvenCycles();
+        return IntStream.range(0, pi.size() - 2).boxed()
+                .filter(i -> ci[pi.get(i)].size() > 1)
+                .flatMap(i -> IntStream.range(i + 1, pi.size() - 1).boxed()
+                        .filter(j -> ci[pi.get(j)].size() > 1).flatMap(j -> IntStream.range(j + 1, pi.size()).boxed()
+                                .filter(k -> ci[pi.get(k)].size() > 1)
+                                .filter(k -> {
+                                    int a = pi.get(i), b = pi.get(j), c = pi.get(k);
+                                    val is_2Move = ci[a] != ci[b] && ci[b] != ci[c] && ci[a] != ci[c];
+                                    // skip (-2)-moves
+                                    return !is_2Move;
+                                }).map(k -> {
+                                    int a = pi.get(i), b = pi.get(j), c = pi.get(k);
+
+                                    val move = Cycle.create(a, b, c);
+                                    val spi_ = computeProduct(true, pi.getMaxSymbol() + 1, spi, move.getInverse());
+                                    val delta = spi_.getNumberOfEvenCycles() - numberOfEvenCycles;
 
                                     if (delta >= 0)
                                         return new Pair<>(move, delta);
@@ -230,17 +278,17 @@ public class CommonOperations implements Serializable {
     }
 
     public static List<Cycle> generateAll2MovesFromOrientedCycles(final Collection<Cycle> spi, final Cycle pi) {
-        final var _2moves = new ArrayList<Cycle>();
+        val _2moves = new ArrayList<Cycle>();
 
-        for (final var cycle : spi.stream().filter(c -> isOriented(pi, c))
+        for (val cycle : spi.stream().filter(c -> isOriented(pi, c))
                 .collect(Collectors.toList())) {
-            final var before = cycle.isEven() ? 1 : 0;
+            val before = cycle.isEven() ? 1 : 0;
             for (var i = 0; i < cycle.size() - 2; i++) {
                 for (var j = i + 1; j < cycle.size() - 1; j++) {
                     for (var k = j + 1; k < cycle.size(); k++) {
-                        final var a = cycle.get(i);
-                        final var b = cycle.get(j);
-                        final var c = cycle.get(k);
+                        val a = cycle.get(i);
+                        val b = cycle.get(j);
+                        val c = cycle.get(k);
                         if (areSymbolsInCyclicOrder(pi, a, b, c)) {
                             var after = cycle.getK(a, b) % 2 == 1 ? 1 : 0;
                             after += cycle.getK(b, c) % 2 == 1 ? 1 : 0;
@@ -272,37 +320,37 @@ public class CommonOperations implements Serializable {
 
     // optimize
     public static List<Collection<Cycle>> getComponents(final Collection<Cycle> spi, final Cycle pi) {
-        final var cycleIndex = cycleIndex(spi, pi);
-        final var piInverse = pi.getInverse();
+        val cycleIndex = cycleIndex(spi, pi);
+        val piInverse = pi.getInverse();
 
         final List<Collection<Cycle>> components = new ArrayList<>(); // small components
 
         Set<Cycle> nonVisitedCycles = spi.stream().filter(c -> c.size() > 1).collect(Collectors.toSet());
 
         while (!nonVisitedCycles.isEmpty()) {
-            final var queue = new LinkedList<Cycle>();
+            val queue = new LinkedList<Cycle>();
             queue.add(nonVisitedCycles.stream().findAny().get());
 
             final Set<Cycle> component = new HashSet<>();
             while (!queue.isEmpty()) {
-                final var cycle = queue.remove();
+                val cycle = queue.remove();
                 if (cycle.size() == 1)
                     continue;
 
                 component.add(cycle);
 
                 for (int i = 0; i < cycle.size(); i++) {
-                    final var symbol = cycle.get(i);
-                    final var aPos = piInverse.indexOf(symbol);
-                    final var bPos = piInverse.indexOf(cycle.image(symbol));
+                    val symbol = cycle.get(i);
+                    val aPos = piInverse.indexOf(symbol);
+                    val bPos = piInverse.indexOf(cycle.image(symbol));
 
                     var nextPos = (aPos + 1) % piInverse.size();
 
                     while (nextPos != bPos) {
-                        final var _cycle = cycleIndex[piInverse.get(nextPos)];
+                        val _cycle = cycleIndex[piInverse.get(nextPos)];
                         if (_cycle != null) {
                             for (int j = 0; j < _cycle.size(); j++) {
-                                final var pos = piInverse.indexOf(_cycle.get(j));
+                                val pos = piInverse.indexOf(_cycle.get(j));
                                 if (isOutOfInterval(pos, aPos, bPos) && (!component.contains(cycleIndex[(_cycle.get(j))]))) {
                                     component.add(cycleIndex[(_cycle.get(j))]);
                                     queue.add(cycleIndex[(_cycle.get(j))]);
@@ -325,7 +373,7 @@ public class CommonOperations implements Serializable {
     }
 
     public static Set<Integer> getOpenGates(final Collection<Cycle> spi, final Cycle pi) {
-        final var openGates = new HashSet<Integer>();
+        val openGates = new HashSet<Integer>();
 
         for (Cycle epsilon : spi) {
             if (epsilon.size() == 1) continue;
@@ -373,13 +421,13 @@ public class CommonOperations implements Serializable {
     }
 
     public static boolean is11_8(MulticyclePermutation spi, Cycle pi, final List<Cycle> moves) {
-        final var before = spi.getNumberOfEvenCycles();
-        for (final var move : moves) {
-            pi = applyTransposition(pi, move);
+        val before = spi.getNumberOfEvenCycles();
+        for (val move : moves) {
+            pi = optimazedApplyTransposition(pi, move);
             spi = PermutationGroups.computeProduct(spi, move.getInverse());
         }
-        final var after = spi.getNumberOfEvenCycles();
-        final var ratio = (float) moves.size() / ((after - before) / 2);
+        val after = spi.getNumberOfEvenCycles();
+        val ratio = (float) moves.size() / ((after - before) / 2);
         return ratio >= 1 && ratio <= ((float) 11 / 8);
     }
 }
