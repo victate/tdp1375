@@ -4,6 +4,7 @@ import br.unb.cic.tdp.base.Configuration;
 import br.unb.cic.tdp.permutation.Cycle;
 import br.unb.cic.tdp.permutation.MulticyclePermutation;
 import com.google.common.primitives.Ints;
+import lombok.val;
 import org.apache.commons.math3.util.Pair;
 import org.paukov.combinatorics.Factory;
 
@@ -23,31 +24,30 @@ public class Oriented5Cycle {
      * equals to 5 that doesn't allow the application of a 2-move.
      */
     public static List<Pair<Configuration, List<Cycle>>> generate() {
-        final var orientedCycle = Cycle.create("(0,3,1,4,2)");
-        final var triple = new int[]{0, 1, 2};
+        val orientedCycle = Cycle.create("(0,3,1,4,2)");
+        val triple = new int[]{0, 1, 2};
 
-        final var result = new ArrayList<Pair<Configuration, List<Cycle>>>();
+        val result = new ArrayList<Pair<Configuration, List<Cycle>>>();
 
-        final var verifiedConfigurations = new HashSet<Configuration>();
+        val verifiedConfigurations = new HashSet<Configuration>();
 
-        final var spi = new MulticyclePermutation(orientedCycle);
+        val spi = new MulticyclePermutation(orientedCycle);
 
-        for (final var permutation : Factory.createPermutationGenerator(Factory
-                .createVector(Arrays.stream(spi.getSymbols().toArray()).boxed().collect(Collectors.toSet())))) {
-            final var pi = Cycle.create(Ints.toArray(permutation.getVector()));
-            final var config = new Configuration(spi, pi);
+        for (val permutation : Factory.createPermutationGenerator(Factory.createVector(spi.getSymbols()))) {
+            val pi = Cycle.create(Ints.toArray(permutation.getVector()));
+            val config = new Configuration(spi, pi);
 
             if (areSymbolsInCyclicOrder(pi, triple)) {
                 if (!verifiedConfigurations.contains(config)) {
                     verifiedConfigurations.add(config);
 
-                    final var _2Move = searchFor2MoveFromOrientedCycle(spi, pi);
+                    val _2Move = searchFor2MoveFromOrientedCycle(spi, pi);
                     if (_2Move.isEmpty()) {
-                        final var moves = searchForSortingSeq(pi, spi, new Stack<>(), 1, 1.5F);
+                        val moves = searchForSortingSeq(pi, spi, new Stack<>(), 1, 1.5F);
                         assert !moves.isEmpty() : "ERROR";
                         result.add(new Pair<>(config, moves));
                     } else {
-                        result.add(new Pair<>(config, Arrays.asList(_2Move.get())));
+                        result.add(new Pair<>(config, List.of(_2Move.get())));
                     }
                 }
             }

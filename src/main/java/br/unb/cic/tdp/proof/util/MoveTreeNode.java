@@ -1,5 +1,7 @@
 package br.unb.cic.tdp.proof.util;
 
+import lombok.val;
+
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 
@@ -43,7 +45,7 @@ public class MoveTreeNode {
 
     public String pathToRoot() {
         if (pathToRoot == null) {
-            final var list = new ArrayList<String>();
+            val list = new ArrayList<String>();
             var current = this;
             while (current != null) {
                 list.add(Integer.toString(current.mu));

@@ -9,13 +9,16 @@ import br.unb.cic.tdp.util.Pair;
 import cern.colt.list.IntArrayList;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Multimaps;
 import com.google.common.primitives.Ints;
 import lombok.SneakyThrows;
+import lombok.val;
 import org.paukov.combinatorics.Factory;
 import org.paukov.combinatorics.Generator;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
@@ -23,11 +26,12 @@ import java.util.stream.Collectors;
 
 import static br.unb.cic.tdp.base.CommonOperations.*;
 import static br.unb.cic.tdp.proof.ProofGenerator.removeExtraSymbols;
+import static java.nio.file.Files.lines;
 
 public abstract class BaseAlgorithm {
 
-    protected Multimap<Integer, Pair<Configuration, List<Cycle>>> _3_2_sortings = HashMultimap.create();
-    protected Multimap<Integer, Pair<Configuration, List<Cycle>>> _11_8_sortings = HashMultimap.create();
+    protected Multimap<Integer, Pair<Configuration, List<Cycle>>> _3_2_sortings = Multimaps.synchronizedMultimap(HashMultimap.create());
+    protected Multimap<Integer, Pair<Configuration, List<Cycle>>> _11_8_sortings = Multimaps.synchronizedMultimap(HashMultimap.create());
 
     public BaseAlgorithm() {
         loadSortings("cases/cases-3,2.txt", _3_2_sortings);
@@ -39,8 +43,8 @@ public abstract class BaseAlgorithm {
     protected abstract void load11_8Sortings(Multimap<Integer, Pair<Configuration, List<Cycle>>> sortings);
 
     public static int get3Norm(final Collection<Cycle> mu) {
-        final var numberOfEvenCycles = (int) mu.stream().filter((cycle) -> cycle.size() % 2 == 1).count();
-        final var numberOfSymbols = mu.stream().mapToInt(Cycle::size).sum();
+        val numberOfEvenCycles = (int) mu.stream().filter((cycle) -> cycle.size() % 2 == 1).count();
+        val numberOfSymbols = mu.stream().mapToInt(Cycle::size).sum();
         return (numberOfSymbols - numberOfEvenCycles) / 2;
     }
 
@@ -58,17 +62,17 @@ public abstract class BaseAlgorithm {
     }
 
     public static List<Cycle> ehExtend(final List<Cycle> config, final MulticyclePermutation spi, final Cycle pi) {
-        final var piInverse = pi.getInverse().startingBy(pi.getMinSymbol());
+        val piInverse = pi.getInverse().startingBy(pi.getMinSymbol());
 
-        final var configSymbols = new HashSet<Integer>();
+        val configSymbols = new HashSet<Integer>();
         // O(1), since at this point, ||mu|| never exceeds 16
         for (Cycle cycle : config)
             for (int i = 0; i < cycle.getSymbols().length; i++) {
                 configSymbols.add(cycle.getSymbols()[i]);
             }
 
-        final var configCycleIndex = cycleIndex(config, pi);
-        final var spiCycleIndex = cycleIndex(spi, pi);
+        val configCycleIndex = cycleIndex(config, pi);
+        val spiCycleIndex = cycleIndex(spi, pi);
 
         final Set<Integer> openGates = getOpenGates(config, pi);
 
@@ -76,16 +80,16 @@ public abstract class BaseAlgorithm {
         // These two outer loops are O(1), since at this point, ||mu|| never
         // exceeds 16
         for (final int openGate: openGates) {
-            final var cycle = configCycleIndex[openGate];
-            final var aPos = piInverse.indexOf(openGate);
-            final var bPos = piInverse.indexOf(cycle.image(openGate));
-            final var intersectingCycle = getIntersectingCycle(aPos, bPos, spiCycleIndex, piInverse);
+            val cycle = configCycleIndex[openGate];
+            val aPos = piInverse.indexOf(openGate);
+            val bPos = piInverse.indexOf(cycle.image(openGate));
+            val intersectingCycle = getIntersectingCycle(aPos, bPos, spiCycleIndex, piInverse);
             if (intersectingCycle.isPresent()
                     && !contains(configSymbols, spiCycleIndex[intersectingCycle.get().get(0)])) {
 
                 int a = intersectingCycle.get().get(0), b = intersectingCycle.get().image(a),
                         c = intersectingCycle.get().image(b);
-                final var _config = new ArrayList<>(config);
+                val _config = new ArrayList<>(config);
                 _config.add(Cycle.create(a, b, c));
 
                 return _config;
@@ -96,19 +100,19 @@ public abstract class BaseAlgorithm {
         if (openGates.isEmpty()) {
             for (Cycle cycle : config) {
                 for (int i = 0; i < cycle.size(); i++) {
-                    final var aPos = piInverse.indexOf(cycle.get(i));
-                    final var bPos = piInverse.indexOf(cycle.image(cycle.get(i)));
+                    val aPos = piInverse.indexOf(cycle.get(i));
+                    val bPos = piInverse.indexOf(cycle.image(cycle.get(i)));
                     for (int j = 1; j < (aPos < bPos ? bPos - aPos : piInverse.size() - (aPos - bPos)); j++) {
-                        final var index = (j + aPos) % piInverse.size();
+                        val index = (j + aPos) % piInverse.size();
                         if (configCycleIndex[piInverse.get(index)] == null) {
-                            final var intersectingCycle = spiCycleIndex[piInverse.get(index)];
+                            val intersectingCycle = spiCycleIndex[piInverse.get(index)];
                             if (intersectingCycle != null && intersectingCycle.size() > 1
                                     && !contains(configSymbols, spiCycleIndex[intersectingCycle.get(0)])) {
-                                final var a = piInverse.get(index);
-                                final var b = intersectingCycle.image(a);
+                                val a = piInverse.get(index);
+                                val b = intersectingCycle.image(a);
                                 if (isOutOfInterval(piInverse.indexOf(b), aPos, bPos)) {
-                                    final var c = intersectingCycle.image(b);
-                                    final var _config = new ArrayList<>(config);
+                                    val c = intersectingCycle.image(b);
+                                    val _config = new ArrayList<>(config);
                                     _config.add(Cycle.create(a, b, c));
                                     return _config;
                                 }
@@ -127,10 +131,10 @@ public abstract class BaseAlgorithm {
         var nextPos = (aPos + 1) % piInverse.size();
 
         while (nextPos != bPos) {
-            final var intersectingCycle = spiCycleIndex[piInverse.get(nextPos)];
+            val intersectingCycle = spiCycleIndex[piInverse.get(nextPos)];
             if (intersectingCycle != null && intersectingCycle.size() > 1) {
-                final var a = piInverse.get(nextPos);
-                final var b = intersectingCycle.image(a);
+                val a = piInverse.get(nextPos);
+                val b = intersectingCycle.image(a);
                 if (isOutOfInterval(piInverse.indexOf(b), aPos, bPos)) {
                     return Optional.of(intersectingCycle.startingBy(a));
                 }
@@ -143,24 +147,22 @@ public abstract class BaseAlgorithm {
 
     @SneakyThrows
     protected void loadSortings(final String resource, final Multimap<Integer, Pair<Configuration, List<Cycle>>> sortings) {
-        final Path file = Paths.get(ProofGenerator.class.getClassLoader().getResource(resource).toURI());
-        final var br = new BufferedReader(new FileReader(file.toFile()), 10 * 1024 * 1024);
+        val file = Paths.get(ProofGenerator.class.getClassLoader().getResource(resource).toURI());
 
-        String line;
-        while ((line = br.readLine()) != null) {
-            final var lineSplit = line.trim().split("->");
+        lines(file).parallel().forEach(line -> {
+            val lineSplit = line.trim().split("->");
 
-            final var spi = new MulticyclePermutation(lineSplit[0].replace(" ", ","));
-            final var sorting = Arrays.stream(lineSplit[1].substring(1, lineSplit[1].length() - 1)
-                    .split(", ")).map(c -> c.replace(" ", ",")).map(s -> Cycle.create(s))
+            val spi = new MulticyclePermutation(lineSplit[0].replace(" ", ","));
+            val sorting = Arrays.stream(lineSplit[1].substring(1, lineSplit[1].length() - 1)
+                            .split(", ")).map(c -> c.replace(" ", ",")).map(Cycle::create)
                     .collect(Collectors.toList());
-            final var config = new Configuration(spi, CANONICAL_PI[spi.getNumberOfSymbols()]);
+            val config = new Configuration(spi, CANONICAL_PI[spi.getNumberOfSymbols()]);
             sortings.put(config.hashCode(), new Pair<>(config, sorting));
-        }
+        });
     }
 
     protected Pair<Cycle, Cycle> apply2MoveTwoOddCycles(final MulticyclePermutation spi, final Cycle pi) {
-        final var oddCycles = spi.stream().filter(c -> !c.isEven()).limit(2).collect(Collectors.toList());
+        val oddCycles = spi.stream().filter(c -> !c.isEven()).limit(2).collect(Collectors.toList());
         int a = oddCycles.get(0).get(0), b = oddCycles.get(0).get(1), c = oddCycles.get(1).get(0);
 
         final Cycle _2Move;
@@ -180,10 +182,10 @@ public abstract class BaseAlgorithm {
     protected Optional<Pair<Cycle, Cycle>> searchFor2_2Seq(final MulticyclePermutation spi, final Cycle pi) {
         for (Pair<Cycle, Integer> move : (Iterable<Pair<Cycle, Integer>>) generateAll0And2Moves(spi, pi)
                 .filter(r -> r.getSecond() == 2)::iterator) {
-            final var _spi = PermutationGroups
+            val _spi = PermutationGroups
                     .computeProduct(spi, move.getFirst().getInverse());
-            final var _pi = applyTransposition(pi, move.getFirst());
-            final var secondMove = generateAll0And2Moves(_spi, _pi).filter(r -> r.getSecond() == 2).findFirst();
+            val _pi = applyTransposition(pi, move.getFirst());
+            val secondMove = generateAll0And2Moves(_spi, _pi).filter(r -> r.getSecond() == 2).findFirst();
             if (secondMove.isPresent())
                 return Optional.of(new Pair<>(move.getFirst(), secondMove.get().getFirst()));
         }
@@ -193,7 +195,7 @@ public abstract class BaseAlgorithm {
 
     protected Cycle applyMoves(final Cycle pi, final List<Cycle> moves) {
         var _pi = pi;
-        for (final var move : moves) {
+        for (val move : moves) {
             _pi = applyTransposition(_pi, move);
         }
         return _pi;
@@ -205,19 +207,12 @@ public abstract class BaseAlgorithm {
 
     protected Optional<List<Cycle>> searchForSeq(final Collection<Cycle> mu, final Cycle pi,
                                                  final Multimap<Integer, Pair<Configuration, List<Cycle>>> sortings) {
-        final var allSymbols = mu.stream().flatMap(c -> Ints.asList(c.getSymbols()).stream()).collect(Collectors.toSet());
-        final var _pi = new IntArrayList(allSymbols.size());
-        for (final var symbol : pi.getSymbols()) {
-            if (allSymbols.contains(symbol)) {
-                _pi.add(symbol);
-            }
-        }
-
-        final var config = new Configuration(new MulticyclePermutation(mu), Cycle.create(_pi));
+        val _mu = new MulticyclePermutation(mu);
+        val config = new Configuration(_mu, removeExtraSymbols(_mu.getSymbols(), pi));
 
         var sorting= sortings.get(config.hashCode());
         if (sorting != null) {
-            final var pair = sortings.get(config.hashCode()).stream()
+            val pair = sortings.get(config.hashCode()).stream()
                     .filter(p -> p.getFirst().equals(config)).findFirst();
 
             if (pair.isPresent()) {
@@ -232,13 +227,13 @@ public abstract class BaseAlgorithm {
                                                                    final Cycle pi) {
 
         while (!badSmallComponents.isEmpty()) {
-            final var spi = new MulticyclePermutation(badSmallComponents);
-            final var subConfig = new Configuration(spi, removeExtraSymbols(spi.getSymbols(), pi));
+            val spi = new MulticyclePermutation(badSmallComponents);
+            val subConfig = new Configuration(spi, removeExtraSymbols(spi.getSymbols(), pi));
 
             var pair = _11_8_sortings.get(subConfig.hashCode())
                     .stream().filter(p -> p.getFirst().equals(subConfig)).findFirst();
             if (pair.isPresent()) {
-                final var sorting = subConfig.translatedSorting(pair.get().getFirst(), pair.get().getSecond());
+                val sorting = subConfig.translatedSorting(pair.get().getFirst(), pair.get().getSecond());
                 return Optional.of(sorting);
             }
 
@@ -248,17 +243,14 @@ public abstract class BaseAlgorithm {
         return Optional.empty();
     }
 
-    public static <T> Generator<T> combinations(final Collection<T> collection, final int k) {
-        return Factory.createSimpleCombinationGenerator(Factory.createVector(collection), k);
-    }
-
     protected Pair<List<Cycle>, Cycle> apply3_2_Unoriented(final MulticyclePermutation spi, final Cycle pi) {
-        final var segment = spi.getNonTrivialCycles().stream().findFirst().get();
+        val segment = spi.getNonTrivialCycles().stream().findFirst().get();
         List<Cycle> mu = new ArrayList<>();
         mu.add(Cycle.create(segment.get(0), segment.get(1), segment.get(2)));
         for (var i = 0; i < 2; i++) {
             mu = ehExtend(mu, spi, pi);
-            final var moves = searchForSeq(mu, pi, _3_2_sortings);
+            val moves =
+                    searchForSeq(mu, removeExtraSymbols(new MulticyclePermutation(mu).getSymbols(), pi), _3_2_sortings);
             if (moves.isPresent()) {
                 return new Pair<>(moves.get(), applyMoves(pi, moves.get()));
             }
