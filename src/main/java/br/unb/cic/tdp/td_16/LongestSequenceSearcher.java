@@ -1,49 +1,44 @@
-package br.unb.cic.tdp.proof.util;
+package br.unb.cic.tdp.td_16;
 
+import br.unb.cic.tdp.permutation.Cycle;
+import br.unb.cic.tdp.proof.util.ListOfCycles;
 import br.unb.cic.tdp.util.Triplet;
 import com.google.common.primitives.Ints;
 import lombok.SneakyThrows;
 import lombok.val;
 
 import java.util.Arrays;
+import java.util.Stack;
 
-public class SequenceSearcher {
+public class LongestSequenceSearcher {
 
     @SneakyThrows
-    public ListOfCycles search(final ListOfCycles spi,
-                               final boolean[] parity,
-                               final int[][] spiIndex,
-                               final int maxSymbol,
-                               final int[] pi,
-                               final MovesStack moves,
-                               final MoveTreeNode root) {
-        if (root.mu == 0) {
-            val sorting = analyze0Moves(spi, parity, spiIndex, maxSymbol, pi, moves, root);
-            if (!sorting.isEmpty()) {
-                return sorting;
-            }
-        } else {
-            var sorting = analyzeOrientedCycles(spi, parity, spiIndex, maxSymbol, pi, moves, root);
-            if (!sorting.isEmpty()) {
-                return sorting;
-            }
+    public void search(final ListOfCycles spi,
+                       final boolean[] parity,
+                       final int[][] spiIndex,
+                       final int maxSymbol,
+                       final int[] pi,
+                       final Stack<Cycle> moves,
+                       final Stack<Cycle> longest) {
+        if (longest.size() == 5)
+            return;
 
-            sorting = analyzeOddCycles(spi, parity, spiIndex, maxSymbol, pi, moves, root);
-            if (!sorting.isEmpty()) {
-                return sorting;
-            }
-        }
+        analyzeOrientedCycles(spi, parity, spiIndex, maxSymbol, pi, moves, longest);
 
-        return ListOfCycles.EMPTY_LIST;
+        if (longest.size() == 5)
+            return;
+
+        analyzeOddCycles(spi, parity, spiIndex, maxSymbol, pi, moves, longest);
     }
 
-    private ListOfCycles analyzeOddCycles(final ListOfCycles spi,
-                                          final boolean[] parity,
-                                          final int[][] spiIndex,
-                                          final int maxSymbol,
-                                          final int[] pi,
-                                          final MovesStack moves,
-                                          final MoveTreeNode root) {
+    private void analyzeOddCycles(final ListOfCycles spi,
+                                  final boolean[] parity,
+                                  final int[][] spiIndex,
+                                  final int maxSymbol,
+                                  final int[] pi,
+                                  final Stack<Cycle> moves,
+                                  final Stack<Cycle> longest) {
+
         for (int i = 0; i < pi.length - 2; i++) {
             if (parity[pi[i]]) continue;
             for (int j = i + 1; j < pi.length - 1; j++) {
@@ -68,8 +63,6 @@ public class SequenceSearcher {
                     if (triplet.third != 2)
                         continue;
 
-                    moves.push(a, b, c);
-
                     // == APPLY THE MOVE ===
                     spi.removeAll(triplet.first);
                     var numberOfTrivialCycles = 0;
@@ -90,17 +83,15 @@ public class SequenceSearcher {
                     updateIndex(spiIndex, parity, triplet.second);
                     // ==============================
 
-                    if (root.children.length == 0) {
-                        return moves.toListOfCycles();
-                    } else {
-                        for (val m : root.children) {
-                            int[] newPi = applyTransposition(pi, a, b, c, pi.length - numberOfTrivialCycles, spiIndex);
-                            val sorting = search(spi, parity, spiIndex, maxSymbol, newPi, moves, m);
-                            if (!sorting.isEmpty()) {
-                                return moves.toListOfCycles();
-                            }
-                        }
+                    moves.push(Cycle.create(a, b, c));
+
+                    if (moves.size() > longest.size()) {
+                        longest.clear();
+                        longest.addAll(moves);
                     }
+
+                    int[] newPi = applyTransposition(pi, a, b, c, pi.length - numberOfTrivialCycles, spiIndex);
+                    search(spi, parity, spiIndex, maxSymbol, newPi, moves, longest);
 
                     // ==== ROLLBACK ====
                     current = triplet.second.head;
@@ -117,17 +108,15 @@ public class SequenceSearcher {
                 }
             }
         }
-
-        return ListOfCycles.EMPTY_LIST;
     }
 
-    private ListOfCycles analyzeOrientedCycles(final ListOfCycles spi,
-                                               final boolean[] parity,
-                                               final int[][] spiIndex,
-                                               final int maxSymbol,
-                                               final int[] pi,
-                                               final MovesStack moves,
-                                               final MoveTreeNode root) {
+    private void analyzeOrientedCycles(final ListOfCycles spi,
+                                       final boolean[] parity,
+                                       final int[][] spiIndex,
+                                       final int maxSymbol,
+                                       final int[] pi,
+                                       final Stack<Cycle> moves,
+                                       final Stack<Cycle> longest) {
         val piInverseIndex = getPiInverseIndex(pi, maxSymbol);
 
         val orientedCycles = getOrientedCycles(spi, piInverseIndex);
@@ -176,28 +165,27 @@ public class SequenceSearcher {
                             cCycle[0] = c;
                             System.arraycopy(symbols, ab_k + 1, cCycle, 1, bc_k - 1);
 
-                            moves.push(a, b, c);
+                            moves.push(Cycle.create(a, b, c));
 
                             // == APPLY THE MOVE ===
                             spi.remove(cycle);
                             var numberOfTrivialCycles = 0;
-                            if (aCycle.length > 1) spi.add(aCycle); else numberOfTrivialCycles++;
-                            if (bCycle.length > 1) spi.add(bCycle); else numberOfTrivialCycles++;
-                            if (cCycle.length > 1) spi.add(cCycle); else numberOfTrivialCycles++;
+                            if (aCycle.length > 1) spi.add(aCycle);
+                            else numberOfTrivialCycles++;
+                            if (bCycle.length > 1) spi.add(bCycle);
+                            else numberOfTrivialCycles++;
+                            if (cCycle.length > 1) spi.add(cCycle);
+                            else numberOfTrivialCycles++;
                             update(spiIndex, parity, aCycle, bCycle, cCycle);
                             // =======================
 
-                            if (root.children.length == 0) {
-                                return moves.toListOfCycles();
-                            } else {
-                                for (val m : root.children) {
-                                    int[] newPi = applyTransposition(pi, a, b, c, pi.length - numberOfTrivialCycles, spiIndex);
-                                    val sorting = search(spi, parity, spiIndex, maxSymbol, newPi, moves, m);
-                                    if (!sorting.isEmpty()) {
-                                        return moves.toListOfCycles();
-                                    }
-                                }
+                            if (moves.size() > longest.size()) {
+                                longest.clear();
+                                longest.addAll(moves);
                             }
+
+                            int[] newPi = applyTransposition(pi, a, b, c, pi.length - numberOfTrivialCycles, spiIndex);
+                            search(spi, parity, spiIndex, maxSymbol, newPi, moves, longest);
 
                             moves.pop();
 
@@ -214,143 +202,12 @@ public class SequenceSearcher {
             }
             current = current.next;
         }
-
-        return ListOfCycles.EMPTY_LIST;
     }
 
     private static boolean areSymbolsInCyclicOrder(final int[] piInverseIndex, final int a, final int b, final int c) {
         return (piInverseIndex[a] < piInverseIndex[b] && piInverseIndex[b] < piInverseIndex[c]) ||
                 (piInverseIndex[b] < piInverseIndex[c] && piInverseIndex[c] < piInverseIndex[a]) ||
                 (piInverseIndex[c] < piInverseIndex[a] && piInverseIndex[a] < piInverseIndex[b]);
-    }
-
-    private ListOfCycles analyze0Moves(final ListOfCycles spi,
-                                       final boolean[] parity,
-                                       final int[][] spiIndex,
-                                       final int maxSymbol,
-                                       final int[] pi,
-                                       final MovesStack moves,
-                                       final MoveTreeNode root) {
-        val cycleIndexes = new int[maxSymbol + 1][];
-
-        for (int i = 0; i < pi.length - 2; i++) {
-            for (int j = i + 1; j < pi.length - 1; j++) {
-                for (int k = j + 1; k < pi.length; k++) {
-
-                    int a = pi[i], b = pi[j], c = pi[k];
-
-                    val is_2Move = spiIndex[a] != spiIndex[b] &&
-                            spiIndex[b] != spiIndex[c] &&
-                            spiIndex[a] != spiIndex[c];
-                    if (is_2Move)
-                        continue;
-
-                    final Triplet<ListOfCycles, ListOfCycles, Integer> triplet;
-                    // if it's the same cycle
-                    if (spiIndex[a] == spiIndex[b] && spiIndex[b] == spiIndex[c]) {
-                        val cycle = spiIndex[a];
-
-                        if (cycleIndexes[a] == null) {
-                            val index = cycleIndex(cycle);
-                            cycleIndexes[a] = index;
-                            cycleIndexes[b] = index;
-                            cycleIndexes[c] = index;
-                        }
-
-                        val index = cycleIndexes[a];
-
-                        if (areSymbolsInCyclicOrder(index, a, b, c)) {
-                            val before = cycle.length & 1;
-
-                            val ab_k = getK(index, cycle, a, b);
-                            var after = ab_k & 1;
-                            val bc_k = getK(index, cycle, b, c);
-                            after += bc_k & 1;
-                            val ca_k = getK(index, cycle, c, a);
-                            after += ca_k & 1;
-
-                            if (after - before == 2) {
-                                // skip, it's a 2-move
-                                continue;
-                            }
-
-                            after = 0;
-                            final int[] symbols = startingBy(cycle, a);
-                            val aCycle = new int[ca_k];
-                            aCycle[0] = a;
-                            System.arraycopy(symbols, ab_k + bc_k + 1, aCycle, 1, ca_k - 1);
-                            after += aCycle.length & 1;
-
-                            val bCycle = new int[ab_k];
-                            bCycle[0] = b;
-                            System.arraycopy(symbols, 1, bCycle, 1, ab_k - 1);
-                            after += bCycle.length & 1;
-
-                            val cCycle = new int[bc_k];
-                            cCycle[0] = c;
-                            System.arraycopy(symbols, ab_k + 1, cCycle, 1, bc_k - 1);
-                            after += cCycle.length & 1;
-
-                            triplet = new Triplet<>(ListOfCycles.singleton(cycle), ListOfCycles.asList(aCycle, bCycle, cCycle), after - before);
-                        } else {
-                            triplet = simulate0MoveSameCycle(spiIndex, a, b, c);
-                        }
-                    } else {
-                        triplet = simulate0MoveTwoCycles(spiIndex, a, b, c);
-                    }
-
-                    if (triplet.third != 0)
-                        continue;
-
-                    moves.push(a, b, c);
-
-                    // == APPLY THE MOVE ===
-                    var numberOfTrivialCycles = 0;
-                    spi.removeAll(triplet.first);
-
-                    var current = triplet.second.head;
-                    for (int l = 0; l < triplet.second.size; l++) {
-                        val cycle = current.data;
-
-                        if (cycle.length > 1) {
-                            spi.add(cycle);
-                        } else {
-                            numberOfTrivialCycles++;
-                        }
-                        current = current.next;
-                    }
-                    updateIndex(spiIndex, parity, triplet.second);
-                    // ==============================
-
-                    if (root.children.length == 0) {
-                        return moves.toListOfCycles();
-                    } else {
-                        for (val m : root.children) {
-                            int[] newPi = applyTransposition(pi, a, b, c, pi.length - numberOfTrivialCycles, spiIndex);
-                            val sorting = search(spi, parity, spiIndex, maxSymbol, newPi, moves, m);
-                            if (!sorting.isEmpty()) {
-                                return moves.toListOfCycles();
-                            }
-                        }
-                    }
-
-                    // ==== ROLLBACK ====
-                    current = triplet.second.head;
-                    for (int l = 0; l < triplet.second.size; l++) {
-                        val cycle = current.data;
-                        if (cycle.length > 1) spi.remove(cycle);
-                        current = current.next;
-                    }
-                    spi.addAll(triplet.first);
-                    updateIndex(spiIndex, parity, triplet.first);
-                    // ==============================
-
-                    moves.pop();
-                }
-            }
-        }
-
-        return ListOfCycles.EMPTY_LIST;
     }
 
     private static void update(final int[][] index, final boolean[] parity, final int[]... cycles) {
@@ -456,7 +313,7 @@ public class SequenceSearcher {
         val newaCycle = new int[1 + ba_k - 1];
         newaCycle[0] = a_;
         val ab_k = getK(abCycleIndex, abCycle, a_, b_);
-        System.arraycopy(abCycle,  ab_k + 1, newaCycle, 1, ba_k - 1);
+        System.arraycopy(abCycle, ab_k + 1, newaCycle, 1, ba_k - 1);
 
         val newbCycle = new int[1 + cCycle.length + (ab_k - 1)];
         newbCycle[0] = b_;
@@ -483,33 +340,6 @@ public class SequenceSearcher {
 
     private static int image(int[] index, int[] cycle, int a) {
         return cycle[(index[a] + 1) % cycle.length];
-    }
-
-    private static Triplet<ListOfCycles, ListOfCycles, Integer> simulate0MoveSameCycle(final int[][] cycleIndex,
-                                                                                       final int a,
-                                                                                       final int b,
-                                                                                       final int c) {
-        val oldCycle = cycleIndex[a];
-
-        final int[] symbols = startingBy(oldCycle, b);
-        val newCycle = new int[oldCycle.length];
-
-        final int[] oldCycleIndex = cycleIndex(oldCycle);
-
-        newCycle[0] = b;
-        val ab_k = getK(oldCycleIndex, oldCycle, b, a);
-        val bc_k = getK(oldCycleIndex, oldCycle, a, c);
-        System.arraycopy(symbols, ab_k + 1, newCycle, 1, bc_k - 1);
-        newCycle[bc_k] = c;
-
-        System.arraycopy(symbols, 1, newCycle, 1 + bc_k, ab_k - 1);
-        newCycle[ab_k + bc_k] = a;
-
-        val ca_k = getK(oldCycleIndex, oldCycle, c, b);
-        System.arraycopy(symbols, ab_k + bc_k + 1,
-                newCycle, ab_k + bc_k + 1, ca_k - 1);
-
-        return new Triplet<>(ListOfCycles.singleton(oldCycle), ListOfCycles.singleton(newCycle), 0);
     }
 
     private static int[] cycleIndex(int[] cycle) {

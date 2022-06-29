@@ -1,5 +1,6 @@
 package br.unb.cic.tdp.base;
 
+import br.unb.cic.tdp.base.Configuration.Signature;
 import br.unb.cic.tdp.permutation.Cycle;
 import br.unb.cic.tdp.permutation.MulticyclePermutation;
 import br.unb.cic.tdp.permutation.PermutationGroups;
@@ -15,6 +16,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static br.unb.cic.tdp.BaseAlgorithm.isOutOfInterval;
+import static br.unb.cic.tdp.base.Configuration.signature;
 import static br.unb.cic.tdp.permutation.PermutationGroups.computeProduct;
 
 public class CommonOperations implements Serializable {
@@ -195,59 +197,6 @@ public class CommonOperations implements Serializable {
         }
 
         return Collections.emptyList();
-    }
-
-    public static Stream<Pair<Cycle, Integer>> generateAll0_2Moves(final MulticyclePermutation spi, final Cycle pi) {
-        val ci = cycleIndex(spi, pi);
-        return IntStream.range(0, pi.size() - 2).boxed()
-                .flatMap(i -> IntStream.range(i + 1, pi.size() - 1).boxed()
-                .flatMap(j -> IntStream.range(j + 1, pi.size()).boxed()
-                .map(k -> {
-                    int a = pi.get(i), b = pi.get(j), c = pi.get(k);
-                    val is_2Move = ci[a] != ci[b] && ci[b] != ci[c] && ci[a] != ci[c];
-                    val move = Cycle.create(a, b, c);
-                    if (is_2Move)
-                        return new Pair<>(move, -2);
-
-                    val spi_ = computeProduct(true, pi.getMaxSymbol() + 1, spi, move.getInverse());
-                    val delta = spi_.size() - spi.size();
-
-                    if (delta == 0)
-                        return new Pair<>(move, delta);
-
-                    return null;
-                }))).filter(Objects::nonNull);
-    }
-
-    public static Stream<Pair<Cycle, Integer>> generateAll2Moves(final MulticyclePermutation spi, final Cycle pi) {
-        val ci = cycleIndex(spi, pi);
-        val numberOfEvenCycles = spi.getNumberOfEvenCycles();
-        return IntStream.range(0, pi.size() - 2).boxed()
-                .filter(i -> ci[pi.get(i)].size() > 1)
-                .flatMap(i -> IntStream.range(i + 1, pi.size() - 1).boxed()
-                        .filter(j -> ci[pi.get(j)].size() > 1).flatMap(j -> IntStream.range(j + 1, pi.size()).boxed()
-                                .filter(k -> ci[pi.get(k)].size() > 1)
-                                .filter(k -> {
-                                    int a = pi.get(i), b = pi.get(j), c = pi.get(k);
-                                    val is_2Move = ci[a] != ci[b] && ci[b] != ci[c] && ci[a] != ci[c];
-                                    // skip (-2)-moves
-                                    return !is_2Move;
-                                }).map(k -> {
-                                    int a = pi.get(i), b = pi.get(j), c = pi.get(k);
-
-                                    if ((ci[a] == ci[b] && ci[b] == ci[c] && ci[a] == ci[c] && ci[a].isEven()) // If all symbols belong to the same cycle and the cycle is even - can be a 2-move from an oriented cycle
-                                            || ((ci[a] == ci[b] && !ci[a].isEven() && !ci[c].isEven()) || // If the symbols belong to two cycles, they must be odd in order to exist a 2-move
-                                            (ci[a] == ci[c] && !ci[a].isEven() && !ci[b].isEven()))) {
-                                        val move = Cycle.create(a, b, c);
-                                        val spi_ = computeProduct(true, pi.getMaxSymbol() + 1, spi, move.getInverse());
-                                        val delta = spi_.getNumberOfEvenCycles() - numberOfEvenCycles;
-
-                                        if (delta > 0)
-                                            return new Pair<>(move, delta);
-                                    }
-
-                                    return null;
-                                }))).filter(Objects::nonNull);
     }
 
     public static Stream<Pair<Cycle, Integer>> generateAll0And2Moves(final MulticyclePermutation spi, final Cycle pi) {

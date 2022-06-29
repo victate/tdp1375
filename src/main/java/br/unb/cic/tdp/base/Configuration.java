@@ -68,11 +68,13 @@ public class Configuration {
             if (orientedCycles.contains(cycle)) {
                 symbolIndexByOrientedCycle.computeIfAbsent(cycle, c -> {
                     val symbolIndex = new int[pi.getMaxSymbol() + 1];
-                    final int symbolMinIndex = Ints.asList(c.getSymbols()).stream().min(comparing(pi::indexOf)).get();
-                    for (int j = 0; j < c.getSymbols().length; j++) {
-                        if (c.getSymbols()[j] == symbolMinIndex) {
-                            for (int k = 0; k < c.getSymbols().length; k++) {
-                                symbolIndex[c.getSymbols()[(j + k) % c.getSymbols().length]] = k + 1;
+                    int[] symbols = c.getSymbols();
+                    final int symbolMinIndex = Ints.asList(symbols).stream().min(comparing(pi::indexOf)).get();
+                    int length = symbols.length;
+                    for (int j = 0; j < length; j++) {
+                        if (symbols[j] == symbolMinIndex) {
+                            for (int k = 0; k < length; k++) {
+                                symbolIndex[symbols[(j + k) % length]] = k + 1;
                             }
                             break;
                         }
@@ -123,6 +125,28 @@ public class Configuration {
         return new Configuration(spi, pi);
     }
 
+    public static Signature getCanonicalSignature(final MulticyclePermutation spi, final Cycle pi) {
+        Signature canonicalSignature = null;
+        var leastHashCode = Integer.MAX_VALUE;
+
+        for (var it = getEquivalentSignatures(spi, pi).iterator(); it.hasNext(); ) {
+            val equivalentSignature = it.next();
+            val hashCode = equivalentSignature.hashCode();
+
+            if (hashCode < leastHashCode) {
+                leastHashCode = hashCode;
+                canonicalSignature = equivalentSignature;
+            } else if (hashCode == leastHashCode) {
+                val least = least(equivalentSignature.content, canonicalSignature.content);
+                canonicalSignature = least == equivalentSignature.content ? equivalentSignature : canonicalSignature;
+            }
+        }
+
+        canonicalSignature.pi = null;
+
+        return canonicalSignature;
+    }
+
     public Configuration getCanonical() {
         if (canonical == null) {
             float[] canonicalSignature = null;
@@ -149,20 +173,21 @@ public class Configuration {
     private static float[] least(final float[] signature1, final float[] signature2) {
         for (var i = 0; i < signature1.length; i++) {
             if (signature1[i] != signature2[i]) {
-                if (signature1[i] < signature2[i])
-                    return signature1;
-                else
-                    return signature2;
+                return signature1[i] < signature2[i] ? signature1 : signature2;
             }
         }
         return signature2;
     }
 
-    public Stream<Signature> getEquivalentSignatures() {
+    public static Stream<Signature> getEquivalentSignatures(final MulticyclePermutation spi, final Cycle pi) {
         return IntStream.range(0, pi.size()).boxed().flatMap(i -> {
             val shiftedPi = pi.startingBy(pi.get(i));
             return Stream.of(new Signature(shiftedPi, signature(spi, shiftedPi), false), mirror(spi, shiftedPi));
         });
+    }
+
+    public Stream<Signature> getEquivalentSignatures() {
+        return getEquivalentSignatures(this.spi, this.pi);
     }
 
     private static Signature mirror(final MulticyclePermutation spi, final Cycle pi) {
@@ -246,7 +271,7 @@ public class Configuration {
     public static class Signature {
 
         @Getter
-        private final Cycle pi;
+        private Cycle pi;
 
         @Getter
         private final float[] content;

@@ -1,10 +1,11 @@
-package br.unb.cic.tdp;
+package br.unb.cic.tdp.td_16;
 
+import br.unb.cic.tdp.BaseAlgorithm;
 import br.unb.cic.tdp.base.Configuration;
 import br.unb.cic.tdp.permutation.Cycle;
 import br.unb.cic.tdp.permutation.MulticyclePermutation;
-import br.unb.cic.tdp.permutation.PermutationGroups;
 import br.unb.cic.tdp.proof.ProofGenerator;
+import br.unb.cic.tdp.proof.util.ListOfCycles;
 import br.unb.cic.tdp.util.Pair;
 import cern.colt.list.IntArrayList;
 import com.google.common.collect.Multimap;
@@ -22,8 +23,9 @@ import java.util.stream.Collectors;
 import static br.unb.cic.tdp.base.CommonOperations.*;
 import static br.unb.cic.tdp.permutation.PermutationGroups.computeProduct;
 
-public class Silvaetal extends BaseAlgorithm {
+public class HeuristicSorting extends BaseAlgorithm {
 
+    @SuppressWarnings("OptionalGetWithoutIsPresent")
     public Pair<Cycle, List<Cycle>> transform(Cycle pi, Cycle sigma) {
         val n = pi.size();
 
@@ -33,11 +35,12 @@ public class Silvaetal extends BaseAlgorithm {
 
         var spi = computeProduct(true, n, sigma, pi.getInverse());
 
-        val _2_2Seq = searchFor2_2Seq(spi, pi);
-        if (_2_2Seq.isPresent()) {
-            pi = computeProduct(_2_2Seq.get().getSecond(), _2_2Seq.get().getFirst(), pi).asNCycle();
-            spi = computeProduct(true, pi.size(), sigma, pi.getInverse());
-            sorting.addAll(Arrays.asList(_2_2Seq.get().getFirst(), _2_2Seq.get().getSecond()));
+        val longest = new Stack<Cycle>();
+        longestSequenceOf2Moves(spi, pi, new Stack<>(), longest);
+        for (final Cycle move : longest) {
+            pi = computeProduct(move, pi).asNCycle();
+            spi = computeProduct(spi, move.getInverse());
+            sorting.add(move);
         }
 
         while (thereAreOddCycles(spi)) {
@@ -110,7 +113,7 @@ public class Silvaetal extends BaseAlgorithm {
 
             nonBadSmallComponents.clear();
             nonBadSmallComponents.addAll(spi.getNonTrivialCycles());
-            nonBadSmallComponents.removeAll(badSmallComponentsCycles);
+            badSmallComponentsCycles.forEach(nonBadSmallComponents::remove);
         }
 
         // At this point 3-norm of spi is less than 8
@@ -130,6 +133,26 @@ public class Silvaetal extends BaseAlgorithm {
         return new Pair<>(initialPi, sorting);
     }
 
+    private void longestSequenceOf2Moves(final MulticyclePermutation spi, final Cycle pi, final Stack<Cycle> moves, final Stack<Cycle> longest) {
+        val listOfCycles = new ListOfCycles();
+        spi.stream().map(Cycle::getSymbols).forEach(listOfCycles::add);
+
+        val parity = new boolean[pi.size()];
+        int[][] spiIndex = new int[pi.size()][];
+        var current = listOfCycles.head;
+        while (current != null) {
+            val cycle = current.data;
+            for (int i : cycle) {
+                spiIndex[i] = cycle;
+                parity[i] = (cycle.length & 1) == 1;
+            }
+            current = current.next;
+        }
+
+        new LongestSequenceSearcher()
+                .search(listOfCycles, parity, spiIndex, spiIndex.length, pi.getSymbols(), moves, longest);
+    }
+
     @SuppressWarnings({"unchecked"})
     public Pair<Cycle, List<Cycle>> sort(Cycle pi) {
         val n = pi.size();
@@ -145,14 +168,14 @@ public class Silvaetal extends BaseAlgorithm {
 
     @Override
     protected void load11_8Sortings(final Multimap<Integer, Pair<Configuration, List<Cycle>>> sortings) {
-        loadSortingsOriented7Cycles("cases/cases-oriented-7cycle.txt", sortings);
+        loadSortingOriented7Cycles(sortings);
         loadSortings("cases/cases-dfs.txt", sortings);
         loadSortings("cases/cases-comb.txt", sortings);
     }
 
     @SneakyThrows
-    private void loadSortingsOriented7Cycles(final String resource, final Multimap<Integer, Pair<Configuration, List<Cycle>>> sortings) {
-        final Path file = Paths.get(ProofGenerator.class.getClassLoader().getResource(resource).toURI());
+    private void loadSortingOriented7Cycles(final Multimap<Integer, Pair<Configuration, List<Cycle>>> sortings) {
+        final Path file = Paths.get(ProofGenerator.class.getClassLoader().getResource("cases/cases-oriented-7cycle.txt").toURI());
         val br = new BufferedReader(new FileReader(file.toFile()));
 
         String line;
@@ -161,7 +184,7 @@ public class Silvaetal extends BaseAlgorithm {
 
             val spi = new MulticyclePermutation(new MulticyclePermutation("(0,3,4,1,5,2,6)"));
             val sorting = Arrays.stream(lineSplit[1].substring(1, lineSplit[1].length() - 1)
-                            .split(", ")).map(c -> c.replace(" ", ",")).map(s -> Cycle.create(s))
+                            .split(", ")).map(c -> c.replace(" ", ",")).map(Cycle::create)
                     .collect(Collectors.toList());
             val config = new Configuration(spi, Cycle.create(lineSplit[0].replace(" ", ",")));
             sortings.put(config.hashCode(), new Pair<>(config, sorting));
@@ -268,12 +291,7 @@ public class Silvaetal extends BaseAlgorithm {
     private Pair<List<Cycle>, Cycle> apply3_2(final MulticyclePermutation spi, final Cycle pi) {
         var orientedCycle = spi.stream().filter(c -> c.size() == 5 && isOriented(pi, c))
                 .findFirst();
-
-        if (orientedCycle.isPresent()) {
-            return apply3_2BadOriented5Cycle(orientedCycle.get(), pi);
-        } else {
-            return apply3_2_Unoriented(spi, pi);
-        }
+        return orientedCycle.map(cycle -> apply3_2BadOriented5Cycle(cycle, pi)).orElseGet(() -> apply3_2_Unoriented(spi, pi));
     }
 
     private Pair<List<Cycle>, Cycle> apply3_2BadOriented5Cycle(final Cycle orientedCycle, final Cycle pi) {
@@ -286,19 +304,5 @@ public class Silvaetal extends BaseAlgorithm {
         val moves = Arrays.asList(Cycle.create(a, b, c), Cycle.create(b, c, d), Cycle.create(c, d, e));
 
         return new Pair<>(moves, applyMoves(pi, moves));
-    }
-
-    public static void main(String[] args) {
-        System.out.println("Loading cases into memory...");
-        val silvaetal = new Silvaetal();
-        System.out.println("Finished loading...");
-        var pi = Cycle.create(args[0]);
-        val moves = silvaetal.sort(pi);
-        System.out.println(pi);
-        for (Cycle move : moves.getSecond()) {
-            pi = PermutationGroups.computeProduct(move, pi).asNCycle();
-            System.out.print(move);
-            System.out.println("->" + pi);
-        }
     }
 }

@@ -37,13 +37,15 @@ public class PermutationGroups implements Serializable {
         for (var i = 0; i < permutations.length; i++) {
             if (permutations[i] instanceof Cycle) {
                 val cycle = (Cycle) permutations[i];
-                for (var j = 0; j < cycle.size(); j++) {
-                    functions[i][cycle.get(j)] = cycle.image(cycle.get(j));
+                val symbols = cycle.getSymbols();
+                for (var j = 0; j < symbols.length; j++) {
+                    functions[i][symbols[j]] = cycle.image(symbols[j]);
                 }
             } else {
                 for (val cycle : ((MulticyclePermutation) permutations[i])) {
-                    for (var j = 0; j < cycle.size(); j++) {
-                        functions[i][cycle.get(j)] = cycle.image(cycle.get(j));
+                    val symbols = cycle.getSymbols();
+                    for (var j = 0; j < symbols.length; j++) {
+                        functions[i][symbols[j]] = cycle.image(symbols[j]);
                     }
                 }
             }
