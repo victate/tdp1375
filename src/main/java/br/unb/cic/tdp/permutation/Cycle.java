@@ -200,7 +200,7 @@ public class Cycle implements Permutation, Comparable<Cycle> {
     }
 
     public boolean contains(final int symbol) {
-        return symbol > (symbolIndexes.length - 1) && symbolIndexes[symbol] != -1;
+        return (symbol >= 0 && symbol <= symbolIndexes.length - 1) && symbolIndexes[symbol] != -1;
     }
 
     @Override

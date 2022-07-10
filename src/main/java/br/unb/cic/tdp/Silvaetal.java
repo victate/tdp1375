@@ -292,8 +292,7 @@ public class Silvaetal extends BaseAlgorithm {
         System.out.println("Loading cases into memory...");
         val silvaetal = new Silvaetal();
         System.out.println("Finished loading...");
-        var pi = Cycle.create("0,3,1,4,2");
-        var spi = computeProduct(CANONICAL_PI[5], pi.getInverse());
+        var pi = Cycle.create(args[0]);
         val moves = silvaetal.sort(pi);
         System.out.println(pi);
         for (Cycle move : moves.getSecond()) {
