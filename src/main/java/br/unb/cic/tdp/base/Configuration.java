@@ -195,8 +195,8 @@ public class Configuration {
                         signaturePi.get(pi.indexOf(move.get(1))),
                         signaturePi.get(pi.indexOf(move.get(2)))));
             }
-            pi = optimazedApplyTransposition(pi, move);
-            signaturePi = optimazedApplyTransposition(signaturePi, translatedSorting.get(translatedSorting.size() - 1));
+            pi = optimizedApplyTransposition(pi, move);
+            signaturePi = optimizedApplyTransposition(signaturePi, translatedSorting.get(translatedSorting.size() - 1));
         }
 
         return translatedSorting;

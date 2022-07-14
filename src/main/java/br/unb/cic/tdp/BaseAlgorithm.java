@@ -176,7 +176,7 @@ public abstract class BaseAlgorithm {
                 .filter(r -> r.getSecond() == 2)::iterator) {
             val _spi = PermutationGroups
                     .computeProduct(spi, move.getFirst().getInverse());
-            val _pi = optimazedApplyTransposition(pi, move.getFirst());
+            val _pi = optimizedApplyTransposition(pi, move.getFirst());
             val secondMove = generateAll0And2Moves(_spi, _pi).filter(r -> r.getSecond() == 2).findFirst();
             if (secondMove.isPresent())
                 return Optional.of(new Pair<>(move.getFirst(), secondMove.get().getFirst()));
@@ -188,7 +188,7 @@ public abstract class BaseAlgorithm {
     protected Cycle applyMoves(final Cycle pi, final List<Cycle> moves) {
         var _pi = pi;
         for (val move : moves) {
-            _pi = optimazedApplyTransposition(_pi, move);
+            _pi = optimizedApplyTransposition(_pi, move);
         }
         return _pi;
     }

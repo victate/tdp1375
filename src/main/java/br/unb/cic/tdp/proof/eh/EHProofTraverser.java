@@ -17,7 +17,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import static br.unb.cic.tdp.base.CommonOperations.CANONICAL_PI;
-import static br.unb.cic.tdp.base.CommonOperations.optimazedApplyTransposition;
+import static br.unb.cic.tdp.base.CommonOperations.optimizedApplyTransposition;
 
 public class EHProofTraverser {
 
@@ -103,7 +103,7 @@ public class EHProofTraverser {
                             val rho = Cycle.create(pi.get(a), pi.get(b), pi.get(c));
                             sorting.add(rho);
 
-                            pi = optimazedApplyTransposition(pi, rho);
+                            pi = optimizedApplyTransposition(pi, rho);
                         }
                     }
                 }

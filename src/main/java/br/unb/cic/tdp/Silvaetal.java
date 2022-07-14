@@ -83,7 +83,7 @@ public class Silvaetal extends BaseAlgorithm {
                         val seq = searchFor11_8_Seq(configuration, pi);
                         if (seq.isPresent()) {
                             for (val move : seq.get())
-                                pi = optimazedApplyTransposition(pi, move);
+                                pi = optimizedApplyTransposition(pi, move);
                             spi = computeProduct(true, pi.size(), sigma, pi.getInverse());
                             sorting.addAll(seq.get());
                             break;

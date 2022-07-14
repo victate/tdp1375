@@ -20,7 +20,7 @@ class CommonOperationsTest {
 
     @Test
     void testApplyTransposition() {
-        assertEquals(Cycle.create("0 1 2 3 4 5 6"), optimazedApplyTransposition(Cycle.create("0 4 5 6 1 2 3"), Cycle.create("0 4 1")));
+        assertEquals(Cycle.create("0 1 2 3 4 5 6"), optimizedApplyTransposition(Cycle.create("0 4 5 6 1 2 3"), Cycle.create("0 4 1")));
     }
 
     @Test

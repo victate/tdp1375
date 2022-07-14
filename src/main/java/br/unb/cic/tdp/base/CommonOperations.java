@@ -86,7 +86,7 @@ public class CommonOperations implements Serializable {
         return -1;
     }
 
-    public static Cycle optimazedApplyTransposition(final Cycle pi, final Cycle move) {
+    public static Cycle optimizedApplyTransposition(final Cycle pi, final Cycle move) {
         val a = move.get(0);
         val b = move.get(1);
         val c = move.get(2);
@@ -184,7 +184,7 @@ public class CommonOperations implements Serializable {
 
                     val _bigGamma = PermutationGroups.computeProduct(bigGamma, move.getInverse());
                     moves.push(move);
-                    val sorting = searchForSortingSeq(optimazedApplyTransposition(pi, move),
+                    val sorting = searchForSortingSeq(optimizedApplyTransposition(pi, move),
                             _bigGamma, moves, initialNumberOfEvenCycles, maxRatio);
                     if (!sorting.isEmpty()) {
                         return moves;
@@ -423,7 +423,7 @@ public class CommonOperations implements Serializable {
     public static boolean is11_8(MulticyclePermutation spi, Cycle pi, final List<Cycle> moves) {
         val before = spi.getNumberOfEvenCycles();
         for (val move : moves) {
-            pi = optimazedApplyTransposition(pi, move);
+            pi = optimizedApplyTransposition(pi, move);
             spi = PermutationGroups.computeProduct(spi, move.getInverse());
         }
         val after = spi.getNumberOfEvenCycles();
